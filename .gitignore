@@ -1,0 +1,8 @@
+Debug+Asserts/
+*.bc
+*.dot
+*.s
+*.bkp
+*.png
+*.ll
+benchmark/*.pdf
