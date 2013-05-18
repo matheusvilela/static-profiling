@@ -75,6 +75,7 @@ namespace llvm {
     virtual const char *getPassName() const;
     virtual bool runOnFunction(Function &F);
     virtual void releaseMemory();
+    void print(raw_ostream &O, const Module *M) const;
 
     /// getEdgeProbability - Find the edge probability based on the source and
     /// the destination basic block.  If the edge is not found, return 1.0

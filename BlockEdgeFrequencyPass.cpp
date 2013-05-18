@@ -83,8 +83,8 @@ bool BlockEdgeFrequencyPass::runOnFunction(Function &F) {
   Clear();
 
   // Some debug output.
-  errs() << "========== Block Edge Frequency Pass ------------" << "\n";
-  errs() << "Function: " << F.getName() << "\n";
+  DEBUG(errs() << "========== Block Edge Frequency Pass ------------" << "\n");
+  DEBUG(errs() << "Function: " << F.getName() << "\n");
 
   // Find all loop headers of this function.
   for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
@@ -103,14 +103,14 @@ bool BlockEdgeFrequencyPass::runOnFunction(Function &F) {
   BasicBlock *entry = F.begin();
   MarkReachable(entry);
 
-  errs() << "  Processing Fake Loop: " << entry->getName() << "\n";
+  DEBUG(errs() << "  Processing Fake Loop: " << entry->getName() << "\n");
   PropagateFreq(entry);
 
   // Verify frequency integrity.
-  VerifyIntegrity(F) ? (errs() << "    No integrity error\n") :
+  DEBUG(VerifyIntegrity(F) ? (errs() << "    No integrity error\n") :
                              (errs() << "    Unable to calculate correct local " \
                                         "block/edge frequencies for function: "
-                                     << F.getName() << "\n");
+                                     << F.getName() << "\n"));
 
   // Clean up unnecessary information.
   NotVisited.clear();
@@ -122,6 +122,30 @@ bool BlockEdgeFrequencyPass::runOnFunction(Function &F) {
 
 void BlockEdgeFrequencyPass::releaseMemory() {
   Clear();
+}
+
+void BlockEdgeFrequencyPass::print(raw_ostream &O, const Module *M) const {
+
+  O << "\n\n---- Block Freqs ----\n";
+  for (std::map<const BasicBlock *, double>::const_iterator it =
+      BlockFrequencies.begin(); it != BlockFrequencies.end(); ++it) {
+
+    const  BasicBlock* BB = it->first;
+    double frequency      = it->second;
+    O << "  " << BB->getName() << " = " << format("%.3f", frequency)
+      << "\n";
+
+    // Print the edges frequencies for all successor of this block.
+    const TerminatorInst *TI = BB->getTerminator();
+    for (unsigned s = 0; s < TI->getNumSuccessors(); ++s) {
+      BasicBlock *successor = TI->getSuccessor(s);
+      Edge edge = std::make_pair(BB, successor);
+
+      // Print the edge frequency for debugging purposes.
+      O << "   " << BB->getName() << " -> " << successor->getName()
+                   << " = " << format("%.3f", EdgeFrequencies.at(edge)) << "\n";
+    }
+  }
 }
 
 /// getEdgeFrequency - Find the edge frequency based on the source and
@@ -209,7 +233,7 @@ void BlockEdgeFrequencyPass::PropagateLoop(const Loop *loop) {
   MarkReachable(head);
 
   // Propagate frequencies from the loop head.
-  errs() << "  Processing Loop: " << head->getName() << "\n";
+  DEBUG(errs() << "  Processing Loop: " << head->getName() << "\n");
   PropagateFreq(head);
 }
 
@@ -228,8 +252,8 @@ void BlockEdgeFrequencyPass::PropagateFreq(BasicBlock *head) {
     stack.pop_back();
 
     // Debug information.
-    errs() << "  PropagateFreq: " << BB->getName() << ", "
-                 << head->getName() << "\n";
+    DEBUG(errs() << "  PropagateFreq: " << BB->getName() << ", "
+                 << head->getName() << "\n");
 
     // If BB has been visited.
     if (!NotVisited.count(BB))
@@ -291,8 +315,8 @@ void BlockEdgeFrequencyPass::PropagateFreq(BasicBlock *head) {
     }
 
     // Print the block frequency for debugging purposes.
-    errs() << "    [" << BB->getName() << "]: "
-                 << format("%.3f", BlockFrequencies[BB]) << "\n";
+    DEBUG(errs() << "    [" << BB->getName() << "]: "
+                 << format("%.3f", BlockFrequencies[BB]) << "\n");
 
     // Mark the block as visited.
     NotVisited.erase(BB);
@@ -314,8 +338,8 @@ void BlockEdgeFrequencyPass::PropagateFreq(BasicBlock *head) {
         BackEdgeProbabilities[edge] = efreq;
 
       // Print the edge frequency for debugging purposes.
-      errs() << "      " << BB->getName() << "->" << successor->getName()
-                   << ": " << format("%.3f", EdgeFrequencies[edge]) << "\n";
+      DEBUG(errs() << "      " << BB->getName() << "->" << successor->getName()
+                   << ": " << format("%.3f", EdgeFrequencies[edge]) << "\n");
     }
 
     // Propagate frequencies for all successor that are not back edges.
@@ -373,8 +397,8 @@ bool BlockEdgeFrequencyPass::VerifyIntegrity(Function &F) const {
     }
   }
 
-  errs() << "  Predecessor's outgoing edge frequency sum: "
-               << format("%.3f", freq) << "\n";
+  DEBUG(errs() << "  Predecessor's outgoing edge frequency sum: "
+               << format("%.3f", freq) << "\n");
 
   // Check if frequency matches 1.0 (with a 0.01 slack).
   return (freq > 0.99 && freq < 1.01);

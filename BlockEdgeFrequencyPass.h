@@ -86,6 +86,7 @@ namespace llvm {
     virtual const char *getPassName() const;
     virtual bool runOnFunction(Function &F);
     virtual void releaseMemory();
+    void print(raw_ostream &O, const Module *M) const;
 
     /// getEdgeFrequency - Find the edge frequency based on the source and
     /// the destination basic block.  If the edge is not found, return a
