@@ -5,6 +5,7 @@ using namespace llvm;
 
 void BranchPredictionDot::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<BranchPredictionPass>();
+  AU.addRequired<BranchProbabilityInfo>();
   AU.setPreservesAll();
 }
 
@@ -12,6 +13,7 @@ bool BranchPredictionDot::runOnFunction(Function &F) {
 
   int BasicBlockID = 0;
   BPP = &getAnalysis<BranchPredictionPass>();
+  BPI = &getAnalysis<BranchProbabilityInfo>();
   FunctionName = F.getName();
   for (Function::iterator it = F.begin(); it != F.end(); ++it) {
     BasicBlock* BB = it;
@@ -73,8 +75,15 @@ void BranchPredictionDot::printDot(std::ostream& output, const CFG &graph) const
     int id1 = BasicBlockIDs.at(it->first);
     for (std::vector<BasicBlock*>::iterator it2 = successors.begin(); it2 != successors.end(); ++it2) {
       int id2     = BasicBlockIDs.at(*it2);
-      double prob = BPP->getEdgeProbability(it->first, *it2);
-      output << "    " << id1 << " -> " << id2 << "[ label=\"" << prob << "\" ];" << std::endl;
+
+      output.unsetf ( std::ios::floatfield );
+      output.precision(3);
+      const BranchProbability llvm_prob = BPI->getEdgeProbability(it->first, *it2);
+      double prob1 = BPP->getEdgeProbability(it->first, *it2);
+      double prob2 = (double) llvm_prob.getNumerator() / llvm_prob.getDenominator();
+
+      output << "    " << id1 << " -> " << id2 << "[ label=\"" << prob1 <<
+      " , " << prob2 << "\" ];" << std::endl;
     }
   }
 }
