@@ -16,20 +16,23 @@ namespace llvm {
   class BlockEdgeFrequencyPass;
 
   class StaticFunctionCostPass : public FunctionPass {
-  public:
-  private:
-    // Branch probabilities calculated.
+
+   private:
     BlockEdgeFrequencyPass *BEFP;
+    std::map<Function*, double> functionsCosts;
+    double cost;
 
-  public:
-    static char ID; // Class identification, replacement for typeinfo.
+    double getInstructionCost(Instruction *I) const;
 
-    StaticFunctionCostPass();
-    ~StaticFunctionCostPass();
+   public:
+    static char ID;
+
+    StaticFunctionCostPass() : FunctionPass(ID) { }
+    ~StaticFunctionCostPass() { }
 
     virtual void getAnalysisUsage(AnalysisUsage &AU) const;
     virtual bool runOnFunction(Function &F);
     void print(raw_ostream &O, const Module *M) const;
+    double getFunctionCost(Function *F) const;
   };
-
 }

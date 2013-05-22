@@ -6,14 +6,8 @@ using namespace llvm;
 char StaticFunctionCostPass::ID = 0;
 
 static RegisterPass<StaticFunctionCostPass>
-X("static-functin-cost", "Statically estimate a function cost based on basic block and edge frequencies",
+X("static-function-cost", "Statically estimate a function cost based on basic block and edge frequencies",
   false, true);
-
-StaticFunctionCostPass::StaticFunctionCostPass() : FunctionPass(ID) {
-}
-
-StaticFunctionCostPass::~StaticFunctionCostPass() {
-}
 
 void StaticFunctionCostPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<BlockEdgeFrequencyPass>();
@@ -23,9 +17,34 @@ void StaticFunctionCostPass::getAnalysisUsage(AnalysisUsage &AU) const {
 bool StaticFunctionCostPass::runOnFunction(Function &F) {
   BEFP = &getAnalysis<BlockEdgeFrequencyPass>();
 
+  cost = 0.0;
+  for (Function::iterator it = F.begin(); it != F.end(); ++it) {
+    BasicBlock* BB = it;
+    double BB_freq = BEFP->getBlockFrequency(BB);
+    for (BasicBlock::iterator I = BB->begin(); I != BB->end(); ++I) {
+      cost += getInstructionCost(I) * BB_freq;
+    }
+  }
+  functionsCosts[&F] = cost;
   return false;
 }
 
 void StaticFunctionCostPass::print(raw_ostream &O, const Module *M) const {
+  std::stringstream output;
+  output.unsetf ( std::ios::floatfield );
+  output.precision(3);
+  output << "cost = " << cost << std::endl;
+  O << output.str();
 }
 
+double StaticFunctionCostPass::getInstructionCost(Instruction *I) const {
+  return 1.0;
+}
+
+double StaticFunctionCostPass::getFunctionCost(Function *F) const {
+  if (functionsCosts.count(F) > 0) {
+    return functionsCosts.at(F);
+  } else {
+    return 0.0;
+  }
+}
